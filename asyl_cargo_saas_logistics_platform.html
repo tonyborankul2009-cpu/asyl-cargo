@@ -1,0 +1,1555 @@
+<!DOCTYPE html>
+<html lang="ru" class="dark">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>ASYL CARGO — Ваш груз. Под нашим контролем.</title>
+  
+  <!-- Tailwind CSS CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  
+  <!-- React & React DOM -->
+  <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+  <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+  
+  <!-- Babel for JSX -->
+  <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+
+  <!-- Lucide Icons -->
+  <script src="https://unpkg.com/lucide@latest"></script>
+
+  <!-- Google Fonts: Inter -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+
+  <script>
+    tailwind.config = {
+      darkMode: 'class',
+      theme: {
+        extend: {
+          colors: {
+            deepBlack: '#080808',
+            richGraphite: '#111111',
+            darkGraphite: '#181818',
+            softWhite: '#F7F5F0',
+            champagneMuted: '#C9B27C',
+            champagneBright: '#E5D09A',
+            warmGold: '#B89552',
+            status: {
+              transit: '#C9B27C',
+              ready: '#7FAF8A',
+              delivered: '#6F9D79',
+              delayed: '#B98958',
+              problem: '#A85D5D'
+            }
+          },
+          fontFamily: {
+            sans: ['Inter', 'sans-serif'],
+          },
+          backgroundImage: {
+            'radial-glow': 'radial-gradient(circle at 50% 0%, rgba(201, 178, 124, 0.08) 0%, rgba(8, 8, 8, 0.95) 75%)',
+            'grid-pattern': 'linear-gradient(to right, rgba(255,255,255,0.02) 1px, transparent 1px), linear-gradient(to bottom, rgba(255,255,255,0.02) 1px, transparent 1px)'
+          }
+        }
+      }
+    }
+  </script>
+
+  <style>
+    body {
+      background-color: #080808;
+      color: #F7F5F0;
+      font-family: 'Inter', sans-serif;
+      overflow-x: hidden;
+    }
+    .grid-bg {
+      background-size: 40px 40px;
+    }
+    .glass-card {
+      background: rgba(24, 24, 24, 0.75);
+      backdrop-filter: blur(12px);
+      border: 1px solid rgba(255, 255, 255, 0.07);
+    }
+    .glass-card:hover {
+      border-color: rgba(201, 178, 124, 0.35);
+    }
+    .gold-gradient-text {
+      background: linear-gradient(135deg, #E5D09A 0%, #C9B27C 50%, #B89552 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+    }
+    /* Custom Scrollbar */
+    ::-webkit-scrollbar {
+      width: 6px;
+      height: 6px;
+    }
+    ::-webkit-scrollbar-track {
+      background: #080808;
+    }
+    ::-webkit-scrollbar-thumb {
+      background: #181818;
+      border-radius: 3px;
+    }
+    ::-webkit-scrollbar-thumb:hover {
+      background: #C9B27C;
+    }
+  </style>
+</head>
+<body class="bg-deepBlack text-softWhite grid-bg bg-grid-pattern min-h-screen selection:bg-champagneMuted selection:text-deepBlack">
+  
+  <div id="root"></div>
+
+  <script type="text/babel">
+    const { useState, useEffect, useMemo } = React;
+
+    // --- INITIAL DEMO DATA ---
+    const INITIAL_PICKUP_POINTS = [
+      { id: '1', name: 'Алма Сити', address: '5 дом, 6/57', status: 'Active' },
+      { id: '2', name: 'Ерменсай', address: 'Микрорайон Шолпан, Жандарбекова 111', status: 'Active' },
+      { id: '3', name: 'Поселок Кайрат', address: 'ЖК Turar, Блок 1, корпус 2', status: 'Active' }
+    ];
+
+    const INITIAL_CUSTOMERS = [
+      { id: 'c1', name: 'Арман Нургалиев', phone: '+7 777 123 45 67' },
+      { id: 'c2', name: 'Динара Сатпаева', phone: '+7 701 987 65 43' },
+      { id: 'c3', name: 'Ержан Смаилов', phone: '+7 705 555 12 34' }
+    ];
+
+    const INITIAL_SHIPMENTS = [
+      {
+        id: 's1',
+        tracking: 'AC-20481',
+        customer: 'Арман Нургалиев',
+        phone: '+7 777 123 45 67',
+        origin: 'Гуанчжоу, Китай',
+        destination: 'Алматы, Казахстан',
+        status: 'В пути',
+        location: 'Транзитный хаб Хоргос',
+        weight: '42.5 кг',
+        packages: 2,
+        description: 'Электроника и комплектующие',
+        pickupPoint: 'Алма Сити',
+        isDemo: true,
+        updatedAt: '2026-09-22 14:30',
+        history: [
+          { status: 'Заказ принят', location: 'Склад Гуанчжоу', time: '2026-09-18 09:15' },
+          { status: 'Груз получен', location: 'Склад Гуанчжоу', time: '2026-09-19 11:20' },
+          { status: 'В пути', location: 'Транзитный хаб Хоргос', time: '2026-09-22 14:30' }
+        ]
+      },
+      {
+        id: 's2',
+        tracking: 'AC-10592',
+        customer: 'Динара Сатпаева',
+        phone: '+7 701 987 65 43',
+        origin: 'Иу, Китай',
+        destination: 'Алматы, Казахстан',
+        status: 'Готов к выдаче',
+        location: 'Склад Алматы (Ерменсай)',
+        weight: '18.0 кг',
+        packages: 1,
+        description: 'Текстиль и образцы одежды',
+        pickupPoint: 'Ерменсай',
+        isDemo: true,
+        updatedAt: '2026-09-22 10:00',
+        history: [
+          { status: 'Заказ принят', location: 'Склад Иу', time: '2026-09-12 10:00' },
+          { status: 'Груз получен', location: 'Склад Иу', time: '2026-09-13 14:00' },
+          { status: 'В пути', location: 'Граница Достык', time: '2026-09-16 18:30' },
+          { status: 'Прибыл в Казахстан', location: 'Таможенный терминал', time: '2026-09-20 09:10' },
+          { status: 'На складе Алматы', location: 'Склад Ерменсай', time: '2026-09-21 16:45' },
+          { status: 'Готов к выдаче', location: 'Пункт выдачи Ерменсай', time: '2026-09-22 10:00' }
+        ]
+      },
+      {
+        id: 's3',
+        tracking: 'AC-38174',
+        customer: 'Ержан Смаилов',
+        phone: '+7 705 555 12 34',
+        origin: 'Пекин, Китай',
+        destination: 'Алматы, Казахстан',
+        status: 'Задержан',
+        location: 'Таможенный досмотр',
+        weight: '120.0 кг',
+        packages: 5,
+        description: 'Промышленное оборудование',
+        pickupPoint: 'Поселок Кайрат',
+        isDemo: true,
+        updatedAt: '2026-09-21 17:15',
+        history: [
+          { status: 'Заказ принят', location: 'Склад Пекин', time: '2026-09-10 08:00' },
+          { status: 'Груз получен', location: 'Склад Пекин', time: '2026-09-11 12:00' },
+          { status: 'В пути', location: 'Маршрут Пекин-Алматы', time: '2026-09-14 15:00' },
+          { status: 'Задержан', location: 'Таможенный досмотр', time: '2026-09-21 17:15' }
+        ]
+      }
+    ];
+
+    const STATUSES = [
+      'Заказ принят',
+      'Обработка',
+      'Груз получен',
+      'В пути',
+      'Прибыл в Казахстан',
+      'На складе Алматы',
+      'Готов к выдаче',
+      'Выдан',
+      'Задержан',
+      'Проблема'
+    ];
+
+    // --- MAIN APP COMPONENT ---
+    function App() {
+      // Local state replicating database persistence
+      const [shipments, setShipments] = useState(() => {
+        const saved = localStorage.getItem('asyl_shipments');
+        return saved ? JSON.parse(saved) : INITIAL_SHIPMENTS;
+      });
+
+      const [pickupPoints, setPickupPoints] = useState(() => {
+        const saved = localStorage.getItem('asyl_pickup');
+        return saved ? JSON.parse(saved) : INITIAL_PICKUP_POINTS;
+      });
+
+      const [customers, setCustomers] = useState(() => {
+        const saved = localStorage.getItem('asyl_customers');
+        return saved ? JSON.parse(saved) : INITIAL_CUSTOMERS;
+      });
+
+      const [messages, setMessages] = useState(() => {
+        const saved = localStorage.getItem('asyl_messages');
+        return saved ? JSON.parse(saved) : [
+          { id: 'm1', name: 'Бауржан', phone: '+7 702 111 22 33', tracking: 'AC-20481', message: 'Уточните примерную дату прибытия в Алматы.', date: '2026-09-22 11:20', isRead: false }
+        ];
+      });
+
+      const [activityLog, setActivityLog] = useState(() => {
+        const saved = localStorage.getItem('asyl_logs');
+        return saved ? JSON.parse(saved) : [
+          { id: 'l1', admin: 'Система', action: 'Демо-база инициализирована', shipment: 'SYSTEM', date: '2026-09-22 08:00' }
+        ];
+      });
+
+      // View Routing
+      const [view, setView] = useState('client'); // 'client', 'admin-login', 'admin-dashboard'
+      const [adminTab, setAdminTab] = useState('dashboard'); // 'dashboard', 'shipments', 'customers', 'pickup', 'messages', 'logs', 'settings'
+      const [isAuthenticated, setIsAuthenticated] = useState(false);
+
+      // Search & Selected Shipment for Track Widget
+      const [searchTracking, setSearchTracking] = useState('');
+      const [trackedResult, setTrackedResult] = useState(null);
+      const [trackError, setTrackError] = useState('');
+
+      // Toast Notification System
+      const [toast, setToast] = useState(null);
+
+      const showNotification = (msg) => {
+        setToast(msg);
+        setTimeout(() => setToast(null), 3500);
+      };
+
+      // Save to LocalStorage on State Change
+      useEffect(() => {
+        localStorage.setItem('asyl_shipments', JSON.stringify(shipments));
+      }, [shipments]);
+
+      useEffect(() => {
+        localStorage.setItem('asyl_pickup', JSON.stringify(pickupPoints));
+      }, [pickupPoints]);
+
+      useEffect(() => {
+        localStorage.setItem('asyl_messages', JSON.stringify(messages));
+      }, [messages]);
+
+      useEffect(() => {
+        localStorage.setItem('asyl_logs', JSON.stringify(activityLog));
+      }, [activityLog]);
+
+      // Public Tracking Handler
+      const handleTrackSearch = (e, targetCode) => {
+        if(e) e.preventDefault();
+        const code = (targetCode || searchTracking).trim().toUpperCase();
+        if (!code) return;
+
+        const found = shipments.find(s => s.tracking.toUpperCase() === code);
+        if (found) {
+          setTrackedResult(found);
+          setTrackError('');
+        } else {
+          setTrackedResult(null);
+          setTrackError('Груз с таким трек-номером не найден в базе.');
+        }
+      };
+
+      // Status Badge Color Helper
+      const getStatusStyle = (status) => {
+        switch(status) {
+          case 'В пути':
+            return 'bg-champagneMuted/10 text-champagneBright border-champagneMuted/40';
+          case 'Готов к выдаче':
+            return 'bg-status-ready/10 text-status-ready border-status-ready/40';
+          case 'Выдан':
+            return 'bg-status-delivered/10 text-status-delivered border-status-delivered/40';
+          case 'Задержан':
+            return 'bg-status-delayed/10 text-status-delayed border-status-delayed/40';
+          case 'Проблема':
+            return 'bg-status-problem/10 text-status-problem border-status-problem/40';
+          default:
+            return 'bg-white/5 text-softWhite border-white/10';
+        }
+      };
+
+      // Helper to add activity log
+      const logAction = (adminName, actionText, shipmentCode) => {
+        const newLog = {
+          id: 'log_' + Date.now(),
+          admin: adminName || 'Admin',
+          action: actionText,
+          shipment: shipmentCode || 'N/A',
+          date: new Date().toISOString().replace('T', ' ').substring(0, 16)
+        };
+        setActivityLog(prev => [newLog, ...prev]);
+      };
+
+      return (
+        <div className="relative min-h-screen flex flex-col">
+          
+          {/* Toast Notification */}
+          {toast && (
+            <div className="fixed top-24 right-6 z-50 bg-darkGraphite border border-champagneMuted/60 text-softWhite px-5 py-3 rounded-xl shadow-2xl flex items-center gap-3 animate-bounce">
+              <span className="w-2.5 h-2.5 rounded-full bg-champagneMuted"></span>
+              <span className="text-sm font-medium">{toast}</span>
+            </div>
+          )}
+
+          {/* MAIN NAVBAR */}
+          <nav className="sticky top-0 z-40 bg-deepBlack/80 backdrop-blur-xl border-b border-white/5 px-6 py-4">
+            <div className="max-w-7xl mx-auto flex items-center justify-between">
+              
+              {/* Logo */}
+              <div className="flex items-center gap-3 cursor-pointer" onClick={() => setView('client')}>
+                <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-champagneBright via-champagneMuted to-warmGold p-[1px]">
+                  <div className="w-full h-full bg-deepBlack rounded-[11px] flex items-center justify-center font-bold text-champagneBright">
+                    AC
+                  </div>
+                </div>
+                <div>
+                  <span className="text-lg font-bold tracking-wider text-softWhite block leading-none">ASYL</span>
+                  <span className="text-xs font-semibold tracking-widest text-champagneMuted block mt-0.5">CARGO</span>
+                </div>
+              </div>
+
+              {/* Client Links */}
+              {view === 'client' && (
+                <div className="hidden md:flex items-center gap-8 text-sm text-softWhite/70 font-medium">
+                  <a href="#tracking" className="hover:text-champagneBright transition">Отследить груз</a>
+                  <a href="#services" className="hover:text-champagneBright transition">Услуги</a>
+                  <a href="#how-it-works" className="hover:text-champagneBright transition">Как это работает</a>
+                  <a href="#pickup" className="hover:text-champagneBright transition">Пункты выдачи</a>
+                  <a href="#contacts" className="hover:text-champagneBright transition">Контакты</a>
+                </div>
+              )}
+
+              {/* Top CTA */}
+              <div className="flex items-center gap-4">
+                {view === 'client' ? (
+                  <a 
+                    href="#tracking" 
+                    className="bg-champagneMuted hover:bg-champagneBright text-deepBlack text-sm font-semibold px-5 py-2.5 rounded-xl transition duration-200 shadow-lg shadow-champagneMuted/10 flex items-center gap-2"
+                  >
+                    Отследить груз →
+                  </a>
+                ) : (
+                  <button 
+                    onClick={() => setView('client')}
+                    className="border border-white/10 hover:border-champagneMuted/50 text-xs font-medium px-4 py-2 rounded-xl transition text-softWhite/80"
+                  >
+                    ← На сайт
+                  </button>
+                )}
+              </div>
+            </div>
+          </nav>
+
+          {/* PAGE CONTENT SWITCHER */}
+          {view === 'client' && (
+            <ClientSite 
+              shipments={shipments}
+              pickupPoints={pickupPoints}
+              trackedResult={trackedResult}
+              trackError={trackError}
+              searchTracking={searchTracking}
+              setSearchTracking={setSearchTracking}
+              handleTrackSearch={handleTrackSearch}
+              getStatusStyle={getStatusStyle}
+              setMessages={setMessages}
+              showNotification={showNotification}
+            />
+          )}
+
+          {view === 'admin-login' && (
+            <AdminLogin 
+              onLoginSuccess={() => {
+                setIsAuthenticated(true);
+                setView('admin-dashboard');
+                showNotification('Успешная авторизация в Admin Panel');
+              }} 
+            />
+          )}
+
+          {view === 'admin-dashboard' && (
+            <AdminDashboard 
+              shipments={shipments}
+              setShipments={setShipments}
+              pickupPoints={pickupPoints}
+              setPickupPoints={setPickupPoints}
+              customers={customers}
+              setCustomers={setCustomers}
+              messages={messages}
+              setMessages={setMessages}
+              activityLog={activityLog}
+              logAction={logAction}
+              getStatusStyle={getStatusStyle}
+              adminTab={adminTab}
+              setAdminTab={setAdminTab}
+              showNotification={showNotification}
+              onLogout={() => {
+                setIsAuthenticated(false);
+                setView('client');
+                showNotification('Вы вышли из системы');
+              }}
+            />
+          )}
+
+          {/* FOOTER */}
+          <footer className="mt-auto bg-richGraphite border-t border-white/5 py-12 px-6">
+            <div className="max-w-7xl mx-auto flex flex-col md:flex-row items-center justify-between gap-6">
+              <div>
+                <div className="flex items-center gap-2 mb-2">
+                  <span className="font-bold text-softWhite">ASYL CARGO</span>
+                  <span className="text-xs text-champagneMuted">| Алматы, Казахстан</span>
+                </div>
+                <p className="text-xs text-softWhite/50">"Ваш груз. Под нашим контролем."</p>
+                <p className="text-xs text-softWhite/40 mt-2">+7 707 666 93 59 • +7 707 260 71 72</p>
+              </div>
+
+              <div className="flex items-center gap-6">
+                {/* DISCREET ADMIN LINK */}
+                <button 
+                  onClick={() => {
+                    if (isAuthenticated) {
+                      setView('admin-dashboard');
+                    } else {
+                      setView('admin-login');
+                    }
+                  }}
+                  className="text-xs text-softWhite/40 hover:text-champagneMuted transition flex items-center gap-1 bg-white/[0.02] border border-white/5 px-3 py-1.5 rounded-lg"
+                >
+                  <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"/></svg>
+                  Admin Panel →
+                </button>
+              </div>
+            </div>
+          </footer>
+
+        </div>
+      );
+    }
+
+    // ==========================================
+    // CLIENT LANDING & TRACKING PAGE
+    // ==========================================
+    function ClientSite({ 
+      shipments, 
+      pickupPoints, 
+      trackedResult, 
+      trackError, 
+      searchTracking, 
+      setSearchTracking, 
+      handleTrackSearch, 
+      getStatusStyle,
+      setMessages,
+      showNotification
+    }) {
+      const [contactForm, setContactForm] = useState({ name: '', phone: '', tracking: '', message: '' });
+
+      const handleContactSubmit = (e) => {
+        e.preventDefault();
+        if (!contactForm.name || !contactForm.phone || !contactForm.message) return;
+
+        const newMsg = {
+          id: 'msg_' + Date.now(),
+          name: contactForm.name,
+          phone: contactForm.phone,
+          tracking: contactForm.tracking || 'Не указан',
+          message: contactForm.message,
+          date: new Date().toISOString().replace('T', ' ').substring(0, 16),
+          isRead: false
+        };
+
+        setMessages(prev => [newMsg, ...prev]);
+        setContactForm({ name: '', phone: '', tracking: '', message: '' });
+        showNotification('Запрос отправлен. Менеджер свяжется с вами.');
+      };
+
+      return (
+        <main className="space-y-24 pb-20">
+          
+          {/* HERO SECTION */}
+          <section className="relative pt-20 pb-16 px-6 max-w-7xl mx-auto grid grid-cols-1 lg:grid-cols-12 gap-12 items-center">
+            
+            {/* Background Glow */}
+            <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[350px] bg-champagneMuted/10 blur-[120px] rounded-full pointer-events-none" />
+
+            <div className="lg:col-span-7 space-y-8 z-10">
+              <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full border border-champagneMuted/30 bg-champagneMuted/5 text-champagneBright text-xs font-medium">
+                <span className="w-1.5 h-1.5 rounded-full bg-champagneMuted animate-pulse"></span>
+                SaaS Logistics Platform • Almaty Cargo
+              </div>
+
+              <h1 className="text-4xl sm:text-6xl font-bold tracking-tight text-softWhite leading-none">
+                Ваш груз.<br />
+                <span className="gold-gradient-text">Под нашим контролем.</span>
+              </h1>
+
+              <p className="text-lg text-softWhite/70 max-w-xl font-normal leading-relaxed">
+                Отслеживайте отправления и получайте актуальную информацию о доставке в Алматы в режиме реального времени.
+              </p>
+
+              <div className="flex flex-wrap items-center gap-4 pt-2">
+                <a 
+                  href="#tracking" 
+                  className="bg-champagneMuted hover:bg-champagneBright text-deepBlack font-semibold px-8 py-4 rounded-xl transition duration-200 shadow-xl shadow-champagneMuted/15 flex items-center gap-2"
+                >
+                  Отследить груз →
+                </a>
+                <a 
+                  href="#how-it-works" 
+                  className="border border-white/10 hover:border-white/20 bg-darkGraphite/50 text-softWhite px-7 py-4 rounded-xl font-medium transition"
+                >
+                  Как это работает
+                </a>
+              </div>
+            </div>
+
+            {/* HERO VISUAL (SaaS Card Preview) */}
+            <div className="lg:col-span-5 z-10">
+              <div className="relative glass-card rounded-2xl p-6 shadow-2xl border border-white/10 bg-gradient-to-b from-darkGraphite to-richGraphite">
+                
+                {/* Header */}
+                <div className="flex items-center justify-between border-b border-white/5 pb-4 mb-6">
+                  <div className="flex items-center gap-3">
+                    <div className="w-3 h-3 rounded-full bg-champagneMuted/80"></div>
+                    <span className="text-xs font-mono text-softWhite/60">LIVE SHIPMENT DATA</span>
+                  </div>
+                  <span className="text-xs px-2.5 py-1 rounded-full bg-champagneMuted/10 text-champagneBright border border-champagneMuted/30">
+                    SaaS Active
+                  </span>
+                </div>
+
+                {/* Floating Tracking Card Demo */}
+                <div className="space-y-4">
+                  <div className="bg-deepBlack/80 border border-white/5 p-4 rounded-xl flex items-center justify-between">
+                    <div>
+                      <span className="text-[10px] text-softWhite/40 block">TRACKING NUMBER</span>
+                      <span className="text-base font-bold font-mono text-champagneBright">AC-20481</span>
+                    </div>
+                    <div className="text-right">
+                      <span className="text-[10px] text-softWhite/40 block">STATUS</span>
+                      <span className="text-xs px-2 py-0.5 rounded border bg-champagneMuted/10 text-champagneBright border-champagneMuted/30">
+                        В пути
+                      </span>
+                    </div>
+                  </div>
+
+                  <div className="bg-deepBlack/40 border border-white/5 p-4 rounded-xl space-y-3">
+                    <div className="flex justify-between text-xs text-softWhite/70">
+                      <span>Маршрут: Гуанчжоу → Алматы</span>
+                      <span className="font-mono text-champagneBright">68%</span>
+                    </div>
+                    
+                    {/* Progress Bar */}
+                    <div className="w-full bg-white/5 h-1.5 rounded-full overflow-hidden">
+                      <div className="bg-gradient-to-r from-warmGold to-champagneBright h-full w-[68%] rounded-full"></div>
+                    </div>
+
+                    <div className="text-[11px] text-softWhite/50 flex items-center gap-2">
+                      <span className="w-2 h-2 rounded-full bg-champagneMuted"></span>
+                      Текущая локация: Транзитный хаб Хоргос
+                    </div>
+                  </div>
+                </div>
+
+              </div>
+            </div>
+
+          </section>
+
+          {/* TRACKING SYSTEM SECTION */}
+          <section id="tracking" className="max-w-5xl mx-auto px-6 pt-8">
+            <div className="glass-card rounded-3xl p-8 sm:p-12 border border-white/10 bg-richGraphite relative overflow-hidden shadow-2xl">
+              
+              <div className="max-w-2xl mb-8">
+                <span className="text-xs font-semibold uppercase tracking-wider text-champagneMuted block mb-2">Real-Time Tracking System</span>
+                <h2 className="text-3xl font-bold text-softWhite">Track your shipment</h2>
+                <p className="text-sm text-softWhite/60 mt-1">Введите трек-номер, чтобы узнать актуальный статус отправления.</p>
+              </div>
+
+              {/* Input Form */}
+              <form onSubmit={handleTrackSearch} className="flex flex-col sm:flex-row gap-3 mb-8">
+                <div className="relative flex-1">
+                  <input 
+                    type="text" 
+                    value={searchTracking} 
+                    onChange={(e) => setSearchTracking(e.target.value)} 
+                    placeholder="Введите трек-номер (например: AC-20481)" 
+                    className="w-full bg-deepBlack border border-white/15 rounded-xl px-5 py-4 text-softWhite placeholder-softWhite/30 font-mono focus:outline-none focus:border-champagneMuted transition"
+                  />
+                  {searchTracking && (
+                    <button 
+                      type="button" 
+                      onClick={() => setSearchTracking('')} 
+                      className="absolute right-4 top-1/2 -translate-y-1/2 text-xs text-softWhite/40 hover:text-softWhite"
+                    >
+                      Очистить
+                    </button>
+                  )}
+                </div>
+                <button 
+                  type="submit" 
+                  className="bg-champagneMuted hover:bg-champagneBright text-deepBlack font-bold px-8 py-4 rounded-xl transition duration-200 flex items-center justify-center gap-2"
+                >
+                  Отследить →
+                </button>
+              </form>
+
+              {/* Demo Hint Buttons */}
+              <div className="flex items-center gap-3 text-xs text-softWhite/50 mb-6 flex-wrap">
+                <span>Быстрый тест демо-треков:</span>
+                {shipments.filter(s => s.isDemo).map(s => (
+                  <button 
+                    key={s.id} 
+                    onClick={(e) => {
+                      setSearchTracking(s.tracking);
+                      handleTrackSearch(e, s.tracking);
+                    }}
+                    className="border border-white/10 bg-white/[0.02] hover:border-champagneMuted/40 hover:text-champagneBright px-2.5 py-1 rounded font-mono transition"
+                  >
+                    {s.tracking}
+                  </button>
+                ))}
+              </div>
+
+              {/* ERROR STATE */}
+              {trackError && (
+                <div className="p-4 rounded-xl bg-status-problem/10 border border-status-problem/30 text-status-problem text-sm">
+                  {trackError}
+                </div>
+              )}
+
+              {/* RESULT DISPLAY */}
+              {trackedResult && (
+                <div className="mt-8 pt-8 border-t border-white/10 space-y-8 animate-fadeIn">
+                  
+                  {/* Status Banner */}
+                  <div className="grid grid-cols-1 md:grid-cols-4 gap-4 p-6 bg-deepBlack/60 rounded-2xl border border-white/5">
+                    <div>
+                      <span className="text-[10px] uppercase tracking-wider text-softWhite/40 block">Tracking Number</span>
+                      <span className="text-xl font-bold font-mono text-champagneBright">{trackedResult.tracking}</span>
+                    </div>
+                    <div>
+                      <span className="text-[10px] uppercase tracking-wider text-softWhite/40 block mb-1">Status</span>
+                      <span className={`inline-block text-xs font-semibold px-3 py-1 rounded-full border ${getStatusStyle(trackedResult.status)}`}>
+                        {trackedResult.status}
+                      </span>
+                    </div>
+                    <div>
+                      <span className="text-[10px] uppercase tracking-wider text-softWhite/40 block">Current Location</span>
+                      <span className="text-sm text-softWhite font-medium">{trackedResult.location}</span>
+                    </div>
+                    <div>
+                      <span className="text-[10px] uppercase tracking-wider text-softWhite/40 block">Destination</span>
+                      <span className="text-sm text-softWhite font-medium">{trackedResult.destination}</span>
+                    </div>
+                  </div>
+
+                  {/* Details Grid */}
+                  <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-xs text-softWhite/70 p-4 bg-darkGraphite/40 rounded-xl">
+                    <div><span className="text-softWhite/40">Получатель:</span> <span className="font-medium text-softWhite">{trackedResult.customer}</span></div>
+                    <div><span className="text-softWhite/40">Вес:</span> <span className="font-medium text-softWhite">{trackedResult.weight || '—'}</span></div>
+                    <div><span className="text-softWhite/40">Мест:</span> <span className="font-medium text-softWhite">{trackedResult.packages || '1'}</span></div>
+                    <div><span className="text-softWhite/40">Пункт выдачи:</span> <span className="font-medium text-champagneBright">{trackedResult.pickupPoint}</span></div>
+                  </div>
+
+                  {/* TIMELINE HISTORY */}
+                  <div className="space-y-4">
+                    <h3 className="text-sm font-semibold uppercase tracking-wider text-champagneMuted">Shipment History</h3>
+                    
+                    <div className="space-y-4 relative pl-6 before:absolute before:left-2 before:top-2 before:bottom-2 before:w-0.5 before:bg-white/10">
+                      {trackedResult.history.map((h, idx) => (
+                        <div key={idx} className="relative flex items-start justify-between gap-4">
+                          <span className={`absolute -left-6 top-1.5 w-3.5 h-3.5 rounded-full border-2 ${idx === trackedResult.history.length - 1 ? 'bg-champagneMuted border-champagneBright' : 'bg-darkGraphite border-white/30'}`} />
+                          <div>
+                            <p className="text-sm font-semibold text-softWhite">{h.status}</p>
+                            <p className="text-xs text-softWhite/50">{h.location}</p>
+                          </div>
+                          <time className="text-xs font-mono text-softWhite/40">{h.time}</time>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+
+                </div>
+              )}
+
+            </div>
+          </section>
+
+          {/* SERVICES SECTION */}
+          <section id="services" className="max-w-7xl mx-auto px-6 space-y-12">
+            <div className="text-center max-w-2xl mx-auto space-y-3">
+              <span className="text-xs font-semibold uppercase tracking-widest text-champagneMuted">Core Capabilities</span>
+              <h2 className="text-3xl sm:text-4xl font-bold text-softWhite">Everything your cargo needs.</h2>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+              {[
+                { num: '01', title: 'Cargo Delivery', desc: 'Надёжная перевозка товаров из Китая в Казахстан с соблюдением сроков.' },
+                { num: '02', title: 'Shipment Tracking', desc: 'Точное отслеживание отправления по трек-номеру на всех этапах пути.' },
+                { num: '03', title: 'Pickup Points', desc: 'Удобные пункты выдачи заказов в ключевых районах Алматы.' },
+                { num: '04', title: 'Cargo Support', desc: 'Оперативная помощь и консультации по вопросам доставки и получения.' }
+              ].map((s, i) => (
+                <div key={i} className="glass-card bg-richGraphite rounded-2xl p-8 border border-white/10 space-y-4 transition duration-300">
+                  <span className="text-xs font-mono text-champagneMuted font-bold">{s.num}</span>
+                  <h3 className="text-xl font-bold text-softWhite">{s.title}</h3>
+                  <p className="text-sm text-softWhite/60 leading-relaxed">{s.desc}</p>
+                </div>
+              ))}
+            </div>
+          </section>
+
+          {/* HOW IT WORKS SECTION */}
+          <section id="how-it-works" className="max-w-7xl mx-auto px-6 space-y-12">
+            <div className="text-center max-w-2xl mx-auto space-y-3">
+              <span className="text-xs font-semibold uppercase tracking-widest text-champagneMuted">Simple Workflow</span>
+              <h2 className="text-3xl sm:text-4xl font-bold text-softWhite">From shipment to delivery.</h2>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-4 gap-6 relative">
+              {[
+                { step: '01', title: 'Отправьте груз', text: 'Передайте товар на наш склад в Китае' },
+                { step: '02', title: 'Получите трек-номер', text: 'Уникальный код для полного контроля' },
+                { step: '03', title: 'Отслеживайте движение', text: 'Обновления статуса в режиме онлайн' },
+                { step: '04', title: 'Получите груз', text: 'Заберите в удобном ПВЗ в Алматы' }
+              ].map((st, i) => (
+                <div key={i} className="bg-darkGraphite/50 border border-white/5 rounded-2xl p-6 relative">
+                  <span className="text-2xl font-bold font-mono text-champagneMuted/40 block mb-3">{st.step}</span>
+                  <h4 className="text-base font-bold text-softWhite mb-1">{st.title}</h4>
+                  <p className="text-xs text-softWhite/50">{st.text}</p>
+                </div>
+              ))}
+            </div>
+          </section>
+
+          {/* SAAS DASHBOARD PREVIEW */}
+          <section className="max-w-7xl mx-auto px-6">
+            <div className="glass-card rounded-3xl p-8 border border-white/10 bg-gradient-to-b from-richGraphite to-deepBlack space-y-6">
+              <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4 border-b border-white/10 pb-6">
+                <div>
+                  <span className="text-xs text-champagneMuted font-mono">DASHBOARD PREVIEW</span>
+                  <h3 className="text-2xl font-bold text-softWhite">Shipment Overview</h3>
+                </div>
+                <div className="flex items-center gap-3">
+                  <span className="text-xs text-softWhite/60">SaaS Live System v2.4</span>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                <div className="bg-deepBlack/80 p-5 rounded-2xl border border-white/5 space-y-2">
+                  <span className="text-xs text-softWhite/40">Tracking</span>
+                  <p className="text-lg font-mono text-champagneBright font-bold">AC-20481</p>
+                  <p className="text-xs text-softWhite/60">Origin: China → Almaty</p>
+                </div>
+
+                <div className="bg-deepBlack/80 p-5 rounded-2xl border border-white/5 space-y-2">
+                  <span className="text-xs text-softWhite/40">Status</span>
+                  <div>
+                    <span className="text-xs px-2.5 py-1 rounded border bg-champagneMuted/10 text-champagneBright border-champagneMuted/30">
+                      In Transit (68%)
+                    </span>
+                  </div>
+                  <p className="text-xs text-softWhite/60">Estimated: 24 Sep 2026</p>
+                </div>
+
+                <div className="bg-deepBlack/80 p-5 rounded-2xl border border-white/5 space-y-2">
+                  <span className="text-xs text-softWhite/40">Active Milestones</span>
+                  <div className="text-xs space-y-1 text-softWhite/70">
+                    <div>✓ Picked up</div>
+                    <div>● In transit</div>
+                    <div className="opacity-40">○ Arrived in Kazakhstan</div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </section>
+
+          {/* PICKUP LOCATIONS */}
+          <section id="pickup" className="max-w-7xl mx-auto px-6 space-y-8">
+            <div className="space-y-2">
+              <span className="text-xs font-semibold uppercase tracking-widest text-champagneMuted">Convenient Access</span>
+              <h2 className="text-3xl font-bold text-softWhite">Пункты выдачи в Алматы</h2>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+              {pickupPoints.map((p, i) => (
+                <div key={p.id} className="glass-card bg-richGraphite rounded-2xl p-6 border border-white/10 space-y-4">
+                  <div className="flex items-center justify-between">
+                    <span className="text-xs font-mono text-champagneMuted font-bold">0{i+1}</span>
+                    <span className="text-[10px] px-2 py-0.5 rounded bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
+                      {p.status}
+                    </span>
+                  </div>
+                  <h3 className="text-xl font-bold text-softWhite">{p.name}</h3>
+                  <p className="text-sm text-softWhite/60">{p.address}</p>
+                  <button 
+                    onClick={() => alert(`Маршрут к ${p.name} (${p.address}) откроется в 2GIS / Google Maps.`)}
+                    className="text-xs text-champagneBright hover:underline flex items-center gap-1 pt-2"
+                  >
+                    Открыть маршрут →
+                  </button>
+                </div>
+              ))}
+            </div>
+          </section>
+
+          {/* CONTACT SECTION */}
+          <section id="contacts" className="max-w-5xl mx-auto px-6 pt-10">
+            <div className="glass-card rounded-3xl p-8 sm:p-12 border border-white/10 bg-richGraphite grid grid-cols-1 md:grid-cols-12 gap-8 items-center">
+              
+              <div className="md:col-span-5 space-y-6">
+                <span className="text-xs font-semibold uppercase tracking-wider text-champagneMuted">Need help with your shipment?</span>
+                <h2 className="text-3xl font-bold text-softWhite">Свяжитесь с Asyl Cargo.</h2>
+                
+                <div className="space-y-3 pt-2 text-sm text-softWhite/80">
+                  <div>
+                    <p className="text-xs text-softWhite/40">Телефоны поддержка:</p>
+                    <p className="font-mono font-medium text-champagneBright">+7 707 666 93 59</p>
+                    <p className="font-mono font-medium text-champagneBright">+7 707 260 71 72</p>
+                  </div>
+                  <div>
+                    <p className="text-xs text-softWhite/40">Город:</p>
+                    <p className="font-medium text-softWhite">Алматы, Казахстан</p>
+                  </div>
+                </div>
+              </div>
+
+              <div className="md:col-span-7 bg-deepBlack/80 p-6 rounded-2xl border border-white/5">
+                <form onSubmit={handleContactSubmit} className="space-y-4">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <input 
+                      type="text" 
+                      placeholder="Ваше имя *" 
+                      required
+                      value={contactForm.name}
+                      onChange={e => setContactForm({...contactForm, name: e.target.value})}
+                      className="bg-darkGraphite border border-white/10 rounded-xl p-3 text-xs text-softWhite placeholder-softWhite/30 focus:border-champagneMuted outline-none"
+                    />
+                    <input 
+                      type="text" 
+                      placeholder="Телефон *" 
+                      required
+                      value={contactForm.phone}
+                      onChange={e => setContactForm({...contactForm, phone: e.target.value})}
+                      className="bg-darkGraphite border border-white/10 rounded-xl p-3 text-xs text-softWhite placeholder-softWhite/30 focus:border-champagneMuted outline-none"
+                    />
+                  </div>
+                  <input 
+                    type="text" 
+                    placeholder="Трек-номер (если есть)" 
+                    value={contactForm.tracking}
+                    onChange={e => setContactForm({...contactForm, tracking: e.target.value})}
+                    className="w-full bg-darkGraphite border border-white/10 rounded-xl p-3 text-xs text-softWhite placeholder-softWhite/30 focus:border-champagneMuted outline-none"
+                  />
+                  <textarea 
+                    placeholder="Ваше сообщение *" 
+                    rows="3"
+                    required
+                    value={contactForm.message}
+                    onChange={e => setContactForm({...contactForm, message: e.target.value})}
+                    className="w-full bg-darkGraphite border border-white/10 rounded-xl p-3 text-xs text-softWhite placeholder-softWhite/30 focus:border-champagneMuted outline-none"
+                  ></textarea>
+
+                  <button 
+                    type="submit" 
+                    className="w-full bg-champagneMuted hover:bg-champagneBright text-deepBlack font-bold py-3 rounded-xl transition text-xs uppercase tracking-wider"
+                  >
+                    Отправить сообщение
+                  </button>
+                </form>
+              </div>
+
+            </div>
+          </section>
+
+        </main>
+      );
+    }
+
+    // ==========================================
+    // ADMIN AUTHENTICATION COMPONENT
+    // ==========================================
+    function AdminLogin({ onLoginSuccess }) {
+      const [email, setEmail] = useState('admin@asylcargo.kz');
+      const [password, setPassword] = useState('admin123');
+      const [error, setError] = useState('');
+
+      const handleSubmit = (e) => {
+        e.preventDefault();
+        if (email === 'admin@asylcargo.kz' && password === 'admin123') {
+          onLoginSuccess();
+        } else {
+          setError('Неверный Email или Пароль. (Используйте демо: admin@asylcargo.kz / admin123)');
+        }
+      };
+
+      return (
+        <div className="flex-1 flex items-center justify-center p-6">
+          <div className="w-full max-w-md glass-card bg-richGraphite border border-white/10 rounded-3xl p-8 space-y-8 shadow-2xl">
+            <div className="text-center space-y-2">
+              <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-champagneBright to-warmGold p-[1px] mx-auto mb-3">
+                <div className="w-full h-full bg-deepBlack rounded-[15px] flex items-center justify-center font-bold text-champagneBright">
+                  AC
+                </div>
+              </div>
+              <h2 className="text-2xl font-bold text-softWhite">Asyl Cargo Admin</h2>
+              <p className="text-xs text-softWhite/50">Manage shipments, orders and customers</p>
+            </div>
+
+            {error && (
+              <div className="p-3 bg-status-problem/10 border border-status-problem/30 text-status-problem text-xs rounded-xl">
+                {error}
+              </div>
+            )}
+
+            <form onSubmit={handleSubmit} className="space-y-4">
+              <div>
+                <label className="block text-xs text-softWhite/60 mb-1">Email</label>
+                <input 
+                  type="email" 
+                  value={email}
+                  onChange={e => setEmail(e.target.value)}
+                  required
+                  className="w-full bg-deepBlack border border-white/10 rounded-xl p-3 text-xs text-softWhite focus:border-champagneMuted outline-none"
+                />
+              </div>
+
+              <div>
+                <label className="block text-xs text-softWhite/60 mb-1">Password</label>
+                <input 
+                  type="password" 
+                  value={password}
+                  onChange={e => setPassword(e.target.value)}
+                  required
+                  className="w-full bg-deepBlack border border-white/10 rounded-xl p-3 text-xs text-softWhite focus:border-champagneMuted outline-none"
+                />
+              </div>
+
+              <button 
+                type="submit" 
+                className="w-full bg-champagneMuted hover:bg-champagneBright text-deepBlack font-bold py-3.5 rounded-xl transition text-xs uppercase tracking-wider mt-4"
+              >
+                Sign in →
+              </button>
+            </form>
+
+            <div className="text-center text-[11px] text-softWhite/30">
+              Демо-доступ: admin@asylcargo.kz / admin123
+            </div>
+          </div>
+        </div>
+      );
+    }
+
+    // ==========================================
+    // ADMIN DASHBOARD MAIN CONTAINER
+    // ==========================================
+    function AdminDashboard({ 
+      shipments, 
+      setShipments, 
+      pickupPoints, 
+      setPickupPoints, 
+      customers, 
+      setCustomers, 
+      messages, 
+      setMessages, 
+      activityLog, 
+      logAction,
+      getStatusStyle, 
+      adminTab, 
+      setAdminTab,
+      showNotification,
+      onLogout
+    }) {
+      const [searchQuery, setSearchQuery] = useState('');
+      const [filterStatus, setFilterStatus] = useState('All');
+      const [selectedShipment, setSelectedShipment] = useState(null);
+      const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
+
+      // KPI Calculations
+      const stats = useMemo(() => {
+        return {
+          total: shipments.length,
+          transit: shipments.filter(s => s.status === 'В пути').length,
+          ready: shipments.filter(s => s.status === 'Готов к выдаче').length,
+          delivered: shipments.filter(s => s.status === 'Выдан').length,
+          problems: shipments.filter(s => ['Задержан', 'Проблема'].includes(s.status)).length
+        };
+      }, [shipments]);
+
+      // Filtered Shipments
+      const filteredShipments = useMemo(() => {
+        return shipments.filter(s => {
+          const matchesSearch = 
+            s.tracking.toLowerCase().includes(searchQuery.toLowerCase()) ||
+            s.customer.toLowerCase().includes(searchQuery.toLowerCase()) ||
+            s.phone.includes(searchQuery) ||
+            s.destination.toLowerCase().includes(searchQuery.toLowerCase());
+          
+          const matchesStatus = filterStatus === 'All' || s.status === filterStatus;
+
+          return matchesSearch && matchesStatus;
+        });
+      }, [shipments, searchQuery, filterStatus]);
+
+      // Update Shipment Status Handler
+      const handleStatusUpdate = (shipmentId, newStatus, newLocation) => {
+        setShipments(prev => prev.map(s => {
+          if (s.id === shipmentId) {
+            const timeNow = new Date().toISOString().replace('T', ' ').substring(0, 16);
+            const updatedHistory = [
+              ...s.history,
+              { status: newStatus, location: newLocation || s.location, time: timeNow }
+            ];
+            return {
+              ...s,
+              status: newStatus,
+              location: newLocation || s.location,
+              updatedAt: timeNow,
+              history: updatedHistory
+            };
+          }
+          return s;
+        }));
+
+        const sObj = shipments.find(s => s.id === shipmentId);
+        logAction('Admin', `Смена статуса: ${newStatus}`, sObj?.tracking);
+        showNotification(`Статус заказа ${sObj?.tracking} обновлен`);
+      };
+
+      // Create Shipment Handler
+      const handleCreateShipment = (formData) => {
+        const timeNow = new Date().toISOString().replace('T', ' ').substring(0, 16);
+        const newShipment = {
+          id: 's_' + Date.now(),
+          tracking: formData.tracking.toUpperCase(),
+          customer: formData.customerName,
+          phone: formData.customerPhone,
+          origin: formData.origin || 'Гуанчжоу, Китай',
+          destination: formData.destination || 'Алматы, Казахстан',
+          status: formData.status || 'Заказ принят',
+          location: formData.location || 'Склад отправления',
+          weight: formData.weight ? formData.weight + ' кг' : '1.0 кг',
+          packages: Number(formData.packages) || 1,
+          description: formData.description || 'Общий груз',
+          pickupPoint: formData.pickupPoint || pickupPoints[0]?.name,
+          updatedAt: timeNow,
+          history: [
+            { status: formData.status || 'Заказ принят', location: formData.location || 'Склад отправления', time: timeNow }
+          ]
+        };
+
+        setShipments(prev => [newShipment, ...prev]);
+        logAction('Admin', 'Создан новый заказ', newShipment.tracking);
+        setIsCreateModalOpen(false);
+        showNotification(`Заказ ${newShipment.tracking} успешно создан`);
+      };
+
+      return (
+        <div className="flex-1 flex flex-col md:flex-row bg-deepBlack">
+          
+          {/* SIDEBAR */}
+          <aside className="w-full md:w-64 bg-[#0A0A0A] border-r border-white/5 p-6 flex flex-col gap-6">
+            <div className="text-xs font-semibold uppercase tracking-widest text-champagneMuted">
+              Admin Panel
+            </div>
+
+            <nav className="space-y-1">
+              {[
+                { id: 'dashboard', label: 'Dashboard', icon: '📊' },
+                { id: 'shipments', label: 'Shipments', icon: '📦' },
+                { id: 'customers', label: 'Customers', icon: '👥' },
+                { id: 'pickup', label: 'Pickup Points', icon: '📍' },
+                { id: 'messages', label: 'Messages', icon: '💬', badge: messages.filter(m => !m.isRead).length },
+                { id: 'logs', label: 'Activity Log', icon: '📜' },
+                { id: 'settings', label: 'Settings', icon: '⚙️' }
+              ].map(tab => (
+                <button
+                  key={tab.id}
+                  onClick={() => {
+                    setAdminTab(tab.id);
+                    setSelectedShipment(null);
+                  }}
+                  className={`w-full flex items-center justify-between px-4 py-3 rounded-xl text-xs font-medium transition ${adminTab === tab.id ? 'bg-champagneMuted/15 text-champagneBright border border-champagneMuted/30' : 'text-softWhite/60 hover:text-softWhite hover:bg-white/[0.02]'}`}
+                >
+                  <div className="flex items-center gap-2.5">
+                    <span>{tab.icon}</span>
+                    <span>{tab.label}</span>
+                  </div>
+                  {tab.badge > 0 && (
+                    <span className="bg-champagneMuted text-deepBlack text-[10px] font-bold px-1.5 py-0.5 rounded-full">
+                      {tab.badge}
+                    </span>
+                  )}
+                </button>
+              ))}
+            </nav>
+
+            <div className="mt-auto pt-6 border-t border-white/5">
+              <button 
+                onClick={onLogout}
+                className="w-full flex items-center gap-2 text-xs text-status-problem hover:underline px-2 py-1"
+              >
+                <span>🚪</span> Sign out
+              </button>
+            </div>
+          </aside>
+
+          {/* MAIN ADMIN CONTENT */}
+          <main className="flex-1 p-6 md:p-8 space-y-8 overflow-y-auto">
+            
+            {/* TAB: DASHBOARD / OVERVIEW */}
+            {adminTab === 'dashboard' && (
+              <div className="space-y-8">
+                <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+                  <div>
+                    <h1 className="text-2xl font-bold text-softWhite">Logistics Dashboard</h1>
+                    <p className="text-xs text-softWhite/50">Обзор всех заказов и текущей активности</p>
+                  </div>
+                  <button 
+                    onClick={() => setIsCreateModalOpen(true)}
+                    className="bg-champagneMuted hover:bg-champagneBright text-deepBlack text-xs font-bold px-5 py-3 rounded-xl transition flex items-center gap-2"
+                  >
+                    + Create Shipment
+                  </button>
+                </div>
+
+                {/* KPI CARDS */}
+                <div className="grid grid-cols-2 lg:grid-cols-5 gap-4">
+                  {[
+                    { label: 'Total Shipments', val: stats.total, color: 'text-softWhite' },
+                    { label: 'In Transit', val: stats.transit, color: 'text-champagneBright' },
+                    { label: 'Ready for Pickup', val: stats.ready, color: 'text-status-ready' },
+                    { label: 'Delivered', val: stats.delivered, color: 'text-status-delivered' },
+                    { label: 'Problems', val: stats.problems, color: 'text-status-problem' }
+                  ].map((k, i) => (
+                    <div key={i} className="bg-richGraphite border border-white/5 p-5 rounded-2xl space-y-1">
+                      <span className="text-[11px] text-softWhite/40 block">{k.label}</span>
+                      <span className={`text-2xl font-bold font-mono ${k.color}`}>{k.val}</span>
+                    </div>
+                  ))}
+                </div>
+
+                {/* RECENT SHIPMENTS TABLE PREVIEW */}
+                <div className="bg-richGraphite rounded-2xl border border-white/5 p-6 space-y-4">
+                  <div className="flex items-center justify-between">
+                    <h3 className="text-base font-bold text-softWhite">Последние отправления</h3>
+                    <button onClick={() => setAdminTab('shipments')} className="text-xs text-champagneBright hover:underline">
+                      Все заказы →
+                    </button>
+                  </div>
+
+                  <div className="overflow-x-auto">
+                    <table className="w-full text-left text-xs">
+                      <thead className="text-softWhite/40 uppercase font-mono border-b border-white/5">
+                        <tr>
+                          <th className="pb-3">Tracking</th>
+                          <th className="pb-3">Customer</th>
+                          <th className="pb-3">Status</th>
+                          <th className="pb-3">Updated</th>
+                          <th className="pb-3 text-right">Action</th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-white/5">
+                        {shipments.slice(0, 5).map(s => (
+                          <tr key={s.id} className="hover:bg-white/[0.01]">
+                            <td className="py-3 font-mono font-bold text-champagneBright">{s.tracking}</td>
+                            <td className="py-3 text-softWhite">{s.customer}</td>
+                            <td className="py-3">
+                              <span className={`px-2 py-0.5 rounded text-[10px] border ${getStatusStyle(s.status)}`}>
+                                {s.status}
+                              </span>
+                            </td>
+                            <td className="py-3 font-mono text-softWhite/40">{s.updatedAt}</td>
+                            <td className="py-3 text-right">
+                              <button 
+                                onClick={() => {
+                                  setSelectedShipment(s);
+                                  setAdminTab('shipments');
+                                }} 
+                                className="text-xs text-champagneBright hover:underline"
+                              >
+                                Edit / View
+                              </button>
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+
+              </div>
+            )}
+
+            {/* TAB: SHIPMENTS MANAGEMENT */}
+            {adminTab === 'shipments' && (
+              <div className="space-y-6">
+                
+                {/* Header Actions */}
+                <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+                  <div>
+                    <h1 className="text-2xl font-bold text-softWhite">Управление заказами</h1>
+                    <p className="text-xs text-softWhite/50">Просмотр и изминение статусов отправлений</p>
+                  </div>
+                  <button 
+                    onClick={() => setIsCreateModalOpen(true)}
+                    className="bg-champagneMuted hover:bg-champagneBright text-deepBlack text-xs font-bold px-5 py-3 rounded-xl transition"
+                  >
+                    + Create Shipment
+                  </button>
+                </div>
+
+                {/* SEARCH & FILTERS BAR */}
+                <div className="flex flex-col sm:flex-row gap-3">
+                  <input 
+                    type="text" 
+                    placeholder="Поиск по треку, клиенту, телефону..." 
+                    value={searchQuery}
+                    onChange={e => setSearchQuery(e.target.value)}
+                    className="flex-1 bg-richGraphite border border-white/10 rounded-xl px-4 py-2.5 text-xs text-softWhite placeholder-softWhite/30 outline-none focus:border-champagneMuted"
+                  />
+
+                  <select 
+                    value={filterStatus}
+                    onChange={e => setFilterStatus(e.target.value)}
+                    className="bg-richGraphite border border-white/10 rounded-xl px-4 py-2.5 text-xs text-softWhite outline-none focus:border-champagneMuted"
+                  >
+                    <option value="All">Все статусы</option>
+                    {STATUSES.map(st => (
+                      <option key={st} value={st}>{st}</option>
+                    ))}
+                  </select>
+                </div>
+
+                {/* DETAILED SHIPMENT EDIT MODAL / DRAWER */}
+                {selectedShipment && (
+                  <div className="bg-richGraphite border border-champagneMuted/40 p-6 rounded-2xl space-y-6 animate-fadeIn">
+                    <div className="flex items-center justify-between border-b border-white/10 pb-4">
+                      <div>
+                        <span className="text-xs font-mono text-champagneBright font-bold block">{selectedShipment.tracking}</span>
+                        <h3 className="text-lg font-bold text-softWhite">Редактирование заказа</h3>
+                      </div>
+                      <button onClick={() => setSelectedShipment(null)} className="text-xs text-softWhite/40 hover:text-softWhite">
+                        Закрыть ✕
+                      </button>
+                    </div>
+
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                      
+                      {/* STATUS CHANGER FORM */}
+                      <div className="md:col-span-2 space-y-4 bg-deepBlack/50 p-5 rounded-xl border border-white/5">
+                        <h4 className="text-xs font-bold uppercase tracking-wider text-champagneMuted">Изменение статуса (Change Status)</h4>
+                        
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                          <div>
+                            <label className="block text-[11px] text-softWhite/50 mb-1">Новый статус</label>
+                            <select 
+                              id="modalStatusSelect"
+                              defaultValue={selectedShipment.status}
+                              className="w-full bg-darkGraphite border border-white/10 rounded-lg p-2.5 text-xs text-softWhite outline-none focus:border-champagneMuted"
+                            >
+                              {STATUSES.map(st => (
+                                <option key={st} value={st}>{st}</option>
+                              ))}
+                            </select>
+                          </div>
+
+                          <div>
+                            <label className="block text-[11px] text-softWhite/50 mb-1">Текущая локация</label>
+                            <input 
+                              id="modalLocationInput"
+                              type="text" 
+                              defaultValue={selectedShipment.location}
+                              className="w-full bg-darkGraphite border border-white/10 rounded-lg p-2.5 text-xs text-softWhite outline-none focus:border-champagneMuted"
+                            />
+                          </div>
+                        </div>
+
+                        <button 
+                          onClick={() => {
+                            const newSt = document.getElementById('modalStatusSelect').value;
+                            const newLoc = document.getElementById('modalLocationInput').value;
+                            handleStatusUpdate(selectedShipment.id, newSt, newLoc);
+                            setSelectedShipment(prev => ({ ...prev, status: newSt, location: newLoc }));
+                          }}
+                          className="bg-champagneMuted hover:bg-champagneBright text-deepBlack font-bold text-xs px-6 py-2.5 rounded-lg transition"
+                        >
+                          Update Status →
+                        </button>
+                      </div>
+
+                      {/* SHIPMENT SUMMARY */}
+                      <div className="space-y-3 text-xs bg-darkGraphite/50 p-5 rounded-xl">
+                        <div><span className="text-softWhite/40">Клиент:</span> <span className="text-softWhite font-medium block">{selectedShipment.customer}</span></div>
+                        <div><span className="text-softWhite/40">Телефон:</span> <span className="text-softWhite font-mono block">{selectedShipment.phone}</span></div>
+                        <div><span className="text-softWhite/40">Пункт выдачи:</span> <span className="text-champagneBright block">{selectedShipment.pickupPoint}</span></div>
+                        <div><span className="text-softWhite/40">Описание:</span> <span className="text-softWhite block">{selectedShipment.description}</span></div>
+                      </div>
+
+                    </div>
+                  </div>
+                )}
+
+                {/* MAIN TABLE */}
+                <div className="bg-richGraphite rounded-2xl border border-white/5 overflow-hidden">
+                  <div className="overflow-x-auto">
+                    <table className="w-full text-left text-xs">
+                      <thead className="bg-darkGraphite/80 text-softWhite/40 uppercase font-mono p-4">
+                        <tr>
+                          <th className="p-4">Tracking</th>
+                          <th className="p-4">Customer</th>
+                          <th className="p-4">Destination</th>
+                          <th className="p-4">Status</th>
+                          <th className="p-4">Updated</th>
+                          <th className="p-4 text-right">Action</th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-white/5">
+                        {filteredShipments.map(s => (
+                          <tr key={s.id} className="hover:bg-white/[0.01]">
+                            <td className="p-4 font-mono font-bold text-champagneBright">{s.tracking}</td>
+                            <td className="p-4">
+                              <span className="text-softWhite block font-medium">{s.customer}</span>
+                              <span className="text-[10px] text-softWhite/40">{s.phone}</span>
+                            </td>
+                            <td className="p-4 text-softWhite/70">{s.destination}</td>
+                            <td className="p-4">
+                              <span className={`px-2.5 py-1 rounded text-[10px] border ${getStatusStyle(s.status)}`}>
+                                {s.status}
+                              </span>
+                            </td>
+                            <td className="p-4 font-mono text-softWhite/40">{s.updatedAt}</td>
+                            <td className="p-4 text-right">
+                              <button 
+                                onClick={() => setSelectedShipment(s)}
+                                className="text-xs text-champagneBright hover:underline"
+                              >
+                                Edit / View
+                              </button>
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+
+              </div>
+            )}
+
+            {/* TAB: CUSTOMERS */}
+            {adminTab === 'customers' && (
+              <div className="space-y-6">
+                <h1 className="text-2xl font-bold text-softWhite">База клиентов</h1>
+
+                <div className="bg-richGraphite rounded-2xl border border-white/5 p-6">
+                  <div className="overflow-x-auto">
+                    <table className="w-full text-left text-xs">
+                      <thead className="text-softWhite/40 uppercase font-mono border-b border-white/5">
+                        <tr>
+                          <th className="pb-3">Имя клиента</th>
+                          <th className="pb-3">Телефон</th>
+                          <th className="pb-3">Всего посылок</th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-white/5">
+                        {customers.map(c => {
+                          const count = shipments.filter(s => s.phone === c.phone).length;
+                          return (
+                            <tr key={c.id}>
+                              <td className="py-3 text-softWhite font-medium">{c.name}</td>
+                              <td className="py-3 font-mono text-champagneBright">{c.phone}</td>
+                              <td className="py-3 font-mono text-softWhite/60">{count}</td>
+                            </tr>
+                          );
+                        })}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* TAB: PICKUP POINTS MANAGEMENT */}
+            {adminTab === 'pickup' && (
+              <div className="space-y-6">
+                <h1 className="text-2xl font-bold text-softWhite">Пункты выдачи (Pickup Points)</h1>
+
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                  {pickupPoints.map(p => (
+                    <div key={p.id} className="bg-richGraphite p-6 rounded-2xl border border-white/5 space-y-3">
+                      <h3 className="text-lg font-bold text-softWhite">{p.name}</h3>
+                      <p className="text-xs text-softWhite/60">{p.address}</p>
+                      <span className="text-[10px] px-2 py-0.5 rounded bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 inline-block">
+                        {p.status}
+                      </span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* TAB: MESSAGES */}
+            {adminTab === 'messages' && (
+              <div className="space-y-6">
+                <h1 className="text-2xl font-bold text-softWhite">Сообщения клиентов</h1>
+
+                <div className="space-y-4">
+                  {messages.map(m => (
+                    <div key={m.id} className="bg-richGraphite p-6 rounded-2xl border border-white/5 space-y-2">
+                      <div className="flex justify-between text-xs text-softWhite/50">
+                        <span className="font-bold text-softWhite">{m.name} ({m.phone})</span>
+                        <span className="font-mono">{m.date}</span>
+                      </div>
+                      <p className="text-xs text-champagneBright">Трек: {m.tracking}</p>
+                      <p className="text-sm text-softWhite/80">{m.message}</p>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* TAB: ACTIVITY LOG */}
+            {adminTab === 'logs' && (
+              <div className="space-y-6">
+                <h1 className="text-2xl font-bold text-softWhite">Лог действий (Activity Log)</h1>
+
+                <div className="bg-richGraphite rounded-2xl border border-white/5 p-6">
+                  <div className="space-y-3">
+                    {activityLog.map(l => (
+                      <div key={l.id} className="flex items-center justify-between text-xs border-b border-white/5 pb-2">
+                        <div className="flex items-center gap-3">
+                          <span className="text-champagneBright font-medium">{l.admin}</span>
+                          <span className="text-softWhite">{l.action}</span>
+                          <span className="font-mono text-softWhite/40">[{l.shipment}]</span>
+                        </div>
+                        <time className="font-mono text-softWhite/30">{l.date}</time>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* TAB: SETTINGS */}
+            {adminTab === 'settings' && (
+              <div className="space-y-6">
+                <h1 className="text-2xl font-bold text-softWhite">Настройки системы</h1>
+
+                <div className="bg-richGraphite p-6 rounded-2xl border border-white/5 space-y-4 max-w-xl">
+                  <div>
+                    <label className="block text-xs text-softWhite/50 mb-1">Название компании</label>
+                    <input type="text" defaultValue="ASYL CARGO" className="w-full bg-deepBlack border border-white/10 rounded-xl p-3 text-xs text-softWhite" />
+                  </div>
+                  <div>
+                    <label className="block text-xs text-softWhite/50 mb-1">Слоган</label>
+                    <input type="text" defaultValue="Ваш груз. Под нашим контролем." className="w-full bg-deepBlack border border-white/10 rounded-xl p-3 text-xs text-softWhite" />
+                  </div>
+                  <button onClick={() => showNotification('Настройки сохранены')} className="bg-champagneMuted text-deepBlack font-bold text-xs px-6 py-2.5 rounded-xl">
+                    Сохранить
+                  </button>
+                </div>
+              </div>
+            )}
+
+          </main>
+
+          {/* CREATE SHIPMENT MODAL */}
+          {isCreateModalOpen && (
+            <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4">
+              <div className="bg-richGraphite border border-white/10 rounded-3xl p-8 max-w-xl w-full space-y-6 shadow-2xl">
+                <div className="flex items-center justify-between border-b border-white/10 pb-4">
+                  <h3 className="text-xl font-bold text-softWhite">+ Создать новое отправление</h3>
+                  <button onClick={() => setIsCreateModalOpen(false)} className="text-softWhite/40 hover:text-softWhite">✕</button>
+                </div>
+
+                <form onSubmit={(e) => {
+                  e.preventDefault();
+                  const form = e.target;
+                  handleCreateShipment({
+                    tracking: form.tracking.value,
+                    customerName: form.customerName.value,
+                    customerPhone: form.customerPhone.value,
+                    origin: form.origin.value,
+                    destination: form.destination.value,
+                    weight: form.weight.value,
+                    packages: form.packages.value,
+                    description: form.description.value,
+                    pickupPoint: form.pickupPoint.value,
+                    status: 'Заказ принят',
+                    location: 'Склад отправителя'
+                  });
+                }} className="space-y-4">
+                  <div className="grid grid-cols-2 gap-4">
+                    <input name="tracking" placeholder="Трек-номер (например AC-90901) *" required className="bg-deepBlack border border-white/10 rounded-xl p-3 text-xs text-softWhite" />
+                    <input name="customerName" placeholder="ФИО клиента *" required className="bg-deepBlack border border-white/10 rounded-xl p-3 text-xs text-softWhite" />
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-4">
+                    <input name="customerPhone" placeholder="Телефон клиента *" required className="bg-deepBlack border border-white/10 rounded-xl p-3 text-xs text-softWhite" />
+                    <select name="pickupPoint" className="bg-deepBlack border border-white/10 rounded-xl p-3 text-xs text-softWhite">
+                      {pickupPoints.map(p => <option key={p.id} value={p.name}>{p.name}</option>)}
+                    </select>
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-4">
+                    <input name="origin" defaultValue="Гуанчжоу, Китай" placeholder="Откуда" className="bg-deepBlack border border-white/10 rounded-xl p-3 text-xs text-softWhite" />
+                    <input name="destination" defaultValue="Алматы, Казахстан" placeholder="Куда" className="bg-deepBlack border border-white/10 rounded-xl p-3 text-xs text-softWhite" />
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-4">
+                    <input name="weight" placeholder="Вес (кг)" className="bg-deepBlack border border-white/10 rounded-xl p-3 text-xs text-softWhite" />
+                    <input name="packages" type="number" defaultValue="1" placeholder="Мест" className="bg-deepBlack border border-white/10 rounded-xl p-3 text-xs text-softWhite" />
+                  </div>
+
+                  <textarea name="description" placeholder="Описание груза" rows="2" className="w-full bg-deepBlack border border-white/10 rounded-xl p-3 text-xs text-softWhite"></textarea>
+
+                  <button type="submit" className="w-full bg-champagneMuted hover:bg-champagneBright text-deepBlack font-bold py-3.5 rounded-xl text-xs uppercase tracking-wider">
+                    Создать отправление
+                  </button>
+                </form>
+              </div>
+            </div>
+          )}
+
+        </div>
+      );
+    }
+
+    // Render application
+    const root = ReactDOM.createRoot(document.getElementById('root'));
+    root.render(<App />);
+  </script>
+</body>
+</html>
